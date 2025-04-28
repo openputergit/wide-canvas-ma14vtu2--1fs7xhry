@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Lost & Found</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Poppins', sans-serif;
+        }
+        .toast {
+            visibility: hidden;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 16px;
+            border-radius: 8px;
+            z-index: 1000;
+        }
+        .toast.show {
+            visibility: visible;
+            animation: fadeIn 0.5s, fadeOut 0.5s 2.5s;
+        }
+        @keyframes fadeIn {
+            from {opacity: 0;}
+            to {opacity: 1;}
+        }
+        @keyframes fadeOut {
+            from {opacity: 1;}
+            to {opacity: 0;}
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <nav class="bg-blue-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Virtual Lost & Found</h1>
+            <div class="hidden md:flex space-x-4">
+                <button onclick="showTab('home')" class="hover:text-blue-200">Home</button>
+                <button onclick="showTab('post')" class="hover:text-blue-200">Post Item</button>
+                <button onclick="showTab('search')" class="hover:text-blue-200">Search</button>
+                <button id="loginBtn" onclick="toggleAuth()" class="hover:text-blue-200">Login</button>
+            </div>
+            <button class="md:hidden" onclick="toggleMobileMenu()">
+                <i class="bi bi-list text-2xl"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div id="mobileMenu" class="hidden md:hidden bg-blue-500 p-4">
+        <div class="flex flex-col space-y-2 text-white">
+            <button onclick="showTab('home')" class="hover:text-blue-200">Home</button>
+            <button onclick="showTab('post')" class="hover:text-blue-200">Post Item</button>
+            <button onclick="showTab('search')" class="hover:text-blue-200">Search</button>
+            <button onclick="toggleAuth()" class="hover:text-blue-200">Login</button>
+        </div>
+    </div>
+
+    <!-- Home Tab -->
+    <div id="home" class="container mx-auto p-4">
+        <h2 class="text-2xl font-bold mb-4">Recent Items</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="recentItems">
+            <!-- Items will be populated here -->
+        </div>
+    </div>
+
+    <!-- Post Item Tab -->
+    <div id="post" class="container mx-auto p-4 hidden">
+        <h2 class="text-2xl font-bold mb-4">Post Lost/Found Item</h2>
+        <form onsubmit="handleSubmit(event)" class="space-y-4">
+            <div>
+                <label class="block mb-2">Item Type</label>
+                <select id="itemType" class="w-full p-2 border rounded" required>
+                    <option value="lost">Lost Item</option>
+                    <option value="found">Found Item</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2">Item Name</label>
+                <input type="text" id="itemName" class="w-full p-2 border rounded" required>
+            </div>
+            <div>
+                <label class="block mb-2">Category</label>
+                <select id="category" class="w-full p-2 border rounded" required>
+                    <option value="electronics">Electronics</option>
+                    <option value="clothing">Clothing</option>
+                    <option value="documents">Documents</option>
+                    <option value="pets">Pets</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div>
+                <label class="block mb-2">Description</label>
+                <textarea id="description" class="w-full p-2 border rounded" rows="3" required></textarea>
+            </div>
+            <div>
+                <label class="block mb-2">Location</label>
+                <input type="text" id="location" class="w-full p-2 border rounded" required>
+            </div>
+            <div>
+                <label class="block mb-2">Image</label>
+                <input type="file" id="image" accept="image/*" class="w-full p-2 border rounded">
+            </div>
+            <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit</button>
+        </form>
+    </div>
+
+    <!-- Search Tab -->
+    <div id="search" class="container mx-auto p-4 hidden">
+        <div class="mb-4">
+            <input type="text" placeholder="Search items..." class="w-full p-2 border rounded" oninput="handleSearch(this.value)">
+        </div>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="filterItems('all')" class="px-3 py-1 bg-blue-600 text-white rounded">All</button>
+            <button onclick="filterItems('lost')" class="px-3 py-1 bg-red-600 text-white rounded">Lost</button>
+            <button onclick="filterItems('found')" class="px-3 py-1 bg-green-600 text-white rounded">Found</button>
+        </div>
+        <div id="searchResults" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Search results will be populated here -->
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold mb-4">Login/Register</h2>
+            <form onsubmit="handleAuth(event)" class="space-y-4">
+                <div>
+                    <label class="block mb-2">Email</label>
+                    <input type="email" id="authEmail" class="w-full p-2 border rounded" required>
+                </div>
+                <div>
+                    <label class="block mb-2">Password</label>
+                    <input type="password" id="authPassword" class="w-full p-2 border rounded" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Submit</button>
+                <button type="button" onclick="toggleAuth()" class="w-full border border-gray-300 px-4 py-2 rounded hover:bg-gray-100">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast">
+        This is a notification
+    </div>
+
+    <script>
+        // Mock data
+        let items = [
+            { id: 1, type: 'lost', name: 'iPhone 12', category: 'electronics', description: 'Lost in Central Park', location: 'New York', image: 'https://source.unsplash.com/300x200/?iphone' },
+            { id: 2, type: 'found', name: 'Black Wallet', category: 'accessories', description: 'Found near subway station', location: 'Boston', image: 'https://source.unsplash.com/300x200/?wallet' },
+            { id: 3, type: 'lost', name: 'Golden Retriever', category: 'pets', description: 'Lost in neighborhood', location: 'Chicago', image: 'https://source.unsplash.com/300x200/?dog' }
+        ];
+
+        let currentUser = null;
+        const placeholderImage = 'https://via.placeholder.com/300x200?text=No+Image';
+
+        // UI Functions
+        function showTab(tabName) {
+            document.getElementById('home').classList.add('hidden');
+            document.getElementById('post').classList.add('hidden');
+            document.getElementById('search').classList.add('hidden');
+            document.getElementById(tabName).classList.remove('hidden');
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+
+        function toggleAuth() {
+            const modal = document.getElementById('authModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Item Functions
+        function renderItems(itemsToRender) {
+            const container = document.getElementById('recentItems');
+            container.innerHTML = itemsToRender.map(item => `
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-48 object-cover rounded mb-4" onerror="this.src='${placeholderImage}'">
+                    <span class="px-2 py-1 rounded ${item.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${item.type}</span>
+                    <h3 class="text-xl font-semibold mt-2">${item.name}</h3>
+                    <p class="text-gray-600">${item.description}</p>
+                    <p class="text-gray-500 mt-2"><i class="bi bi-geo-alt"></i> ${item.location}</p>
+                    <button onclick="contactOwner(${item.id})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Contact</button>
+                </div>
+            `).join('');
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+            if (!currentUser) {
+                showToast('Please login first');
+                toggleAuth();
+                return;
+            }
+
+            const itemName = document.getElementById('itemName').value;
+            const query = encodeURIComponent(itemName.split(' ')[0]); // Use the first word for better query results
+            const imageFile = document.getElementById('image').files[0];
+            let imageSrc = `https://source.unsplash.com/300x200/?${query}`;
+
+            if (imageFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imageSrc = e.target.result;
+                    saveItem(imageSrc);
+                };
+                reader.onerror = () => {
+                    showToast('Failed to upload image, using default');
+                    saveItem(imageSrc);
+                };
+                reader.readAsDataURL(imageFile);
+            } else {
+                saveItem(imageSrc);
+            }
+
+            function saveItem(image) {
+                const newItem = {
+                    id: items.length + 1,
+                    type: document.getElementById('itemType').value,
+                    name: itemName,
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    location: document.getElementById('location').value,
+                    image: image
+                };
+
+                items.unshift(newItem);
+                renderItems(items);
+                showToast('Item posted successfully');
+                event.target.reset();
+                showTab('home');
+            }
+        }
+
+        function handleSearch(query) {
+            const filtered = items.filter(item => 
+                item.name.toLowerCase().includes(query.toLowerCase()) ||
+                item.description.toLowerCase().includes(query.toLowerCase())
+            );
+            const container = document.getElementById('searchResults');
+            container.innerHTML = filtered.map(item => `
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-48 object-cover rounded mb-4" onerror="this.src='${placeholderImage}'">
+                    <span class="px-2 py-1 rounded ${item.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${item.type}</span>
+                    <h3 class="text-xl font-semibold mt-2">${item.name}</h3>
+                    <p class="text-gray-600">${item.description}</p>
+                    <p class="text-gray-500 mt-2"><i class="bi bi-geo-alt"></i> ${item.location}</p>
+                    <button onclick="contactOwner(${item.id})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Contact</button>
+                </div>
+            `).join('');
+        }
+
+        function filterItems(type) {
+            const filtered = type === 'all' ? items : items.filter(item => item.type === type);
+            const container = document.getElementById('searchResults');
+            container.innerHTML = filtered.map(item => `
+                <div class="bg-white p-4 rounded-lg shadow">
+                    <img src="${item.image}" alt="${item.name}" class="w-full h-48 object-cover rounded mb-4" onerror="this.src='${placeholderImage}'">
+                    <span class="px-2 py-1 rounded ${item.type === 'lost' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${item.type}</span>
+                    <h3 class="text-xl font-semibold mt-2">${item.name}</h3>
+                    <p class="text-gray-600">${item.description}</p>
+                    <p class="text-gray-500 mt-2"><i class="bi bi-geo-alt"></i> ${item.location}</p>
+                    <button onclick="contactOwner(${item.id})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Contact</button>
+                </div>
+            `).join('');
+        }
+
+        function handleAuth(event) {
+            event.preventDefault();
+            currentUser = document.getElementById('authEmail').value;
+            document.getElementById('loginBtn').textContent = 'Logout';
+            showToast('Successfully logged in');
+            toggleAuth();
+        }
+
+        function contactOwner(itemId) {
+            if (!currentUser) {
+                showToast('Please login first');
+                toggleAuth();
+                return;
+            }
+            showToast('Contact request sent');
+        }
+
+        // Initial render
+        renderItems(items);
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
